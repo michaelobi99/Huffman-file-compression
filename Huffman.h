@@ -25,16 +25,27 @@ using uChar = unsigned char;
 
 #define ENDOFSTREAM treeNode(uChar(254), 1)
 
+const std::uint32_t ENDOFCOUNT = 0;
+
 struct code {
 	std::uint32_t symbolCode;
 	std::uint32_t bitLength;
 };
+
+void scale(std::unique_ptr<std::uint32_t[]>& counts) {
+	for (auto elem : std::ranges::iota_view(0, 256)) {
+		if (counts[elem] > 0)
+			counts[elem] = (counts[elem] + 1) / 2;
+	}
+}
 
 //function to count the relative frequencies of the symbols.
 void countBytes(std::fstream& file, std::unique_ptr<std::uint32_t[]>& counts) {
 	char ch{};
 	while (file.get(ch)) {
 		counts[(int)ch]++;
+		if (counts[int(ch)] == 256) //won't fit in a char, hence i scale down all the counts, to enable easy reading and writing
+			scale(counts);
 	}
 	file.close();
 	file.open(R"(..\HuffmanOrder0\testFile.txt)", std::ios_base::in | std::ios_base::binary);
@@ -53,25 +64,23 @@ void createNodes(std::unique_ptr<std::uint32_t[]>& counts, treeQueue& nodes) {
 void outputCounts(std::unique_ptr <stl::BitFile>& output, std::unique_ptr<std::uint32_t[]>& counts) {
 	for (auto i : std::ranges::iota_view(0, 256)) {
 		if (counts[i] > 0) {
-			output->file<<counts[i];
+			output->file.put(counts[i]);
 			output->file.put(i);
 		}
 	}
-	output->file<<0;//end of counts symbol
+	output->file.put(ENDOFCOUNT);//end of counts symbol
 }
 
 void inputCounts(std::unique_ptr <stl::BitFile>& input, treeQueue& nodes) {
-	int count{}, symbol{};
+	std::uint32_t count{}, symbol{};
 	while (true) {
-		input->file>>count;
-		if (count == 0) 
+		count = input->file.get();
+		if (count == ENDOFCOUNT)
 			break;
 		symbol = input->file.get();
-		auto newNode = new treeNode(uChar(symbol), count);
-		nodes.push(newNode);
+		nodes.push(new treeNode(uChar(symbol), count));
 	}
 	nodes.push(new ENDOFSTREAM);
-
 }
 
 treeNode* build_tree(treeQueue& nodes) {
@@ -92,7 +101,7 @@ treeNode* build_tree(treeQueue& nodes) {
 void convertTreeToCode(std::unique_ptr<code[]>& codes, std::uint32_t codeSoFar, std::uint32_t bitCount, treeNode* node) {
 	if (!node->child_0) {//if node is a leaf
 		codes[(int)(node->symbol)].symbolCode = codeSoFar;
-		std::cout << node->symbol <<" : "<<bitCount << ": " << std::bitset<8>(codeSoFar) << "\n";
+		//std::cout << node->symbol <<" : "<<bitCount << ": " << std::bitset<8>(codeSoFar) << "\n";
 		codes[(int)(node->symbol)].bitLength = bitCount;
 		return;
 	}
