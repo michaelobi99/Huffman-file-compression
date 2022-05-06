@@ -3,7 +3,7 @@
 #include <queue>
 #include <bitset>
 #include <ranges>
-#include <algorithm>
+#include <iostream>
 
 struct treeNode {
 	unsigned char symbol;
