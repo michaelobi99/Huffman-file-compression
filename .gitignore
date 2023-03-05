@@ -2,4 +2,5 @@
 *.filters
 *.vcxproj
 Debug
+Release
 *.txt

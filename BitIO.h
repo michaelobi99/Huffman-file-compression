@@ -8,9 +8,9 @@
 
 namespace stl {
 	struct BitFile {
-		std::fstream file;
-		std::uint32_t rack;
-		std::uint32_t mask;
+		std::fstream file{};
+		std::uint32_t rack{};
+		std::uint32_t mask{};
 	};
 
 	struct FileError : std::exception {

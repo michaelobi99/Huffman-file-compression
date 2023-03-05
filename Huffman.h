@@ -24,20 +24,13 @@ using treeQueue = std::priority_queue<treeNode*, std::vector<treeNode*>, treeNod
 using uChar = unsigned char;
 
 #define ENDOFSTREAM treeNode(uChar(254), 1)
-
-const std::uint32_t ENDOFCOUNT = 0;
+#define ENDOFCOUNT 0
 
 struct code {
 	std::uint32_t symbolCode;
 	std::uint32_t bitLength;
 };
 
-void scale(std::unique_ptr<std::uint32_t[]>& counts) {
-	for (auto elem : std::ranges::iota_view(0, 256)) {
-		if (counts[elem] > 0)
-			counts[elem] = (counts[elem] + 1) / 2;
-	}
-}
 
 //function to count the relative frequencies of the symbols.
 void countBytes(std::fstream& file, std::unique_ptr<std::uint32_t[]>& counts) {
@@ -45,10 +38,15 @@ void countBytes(std::fstream& file, std::unique_ptr<std::uint32_t[]>& counts) {
 	while (file.get(ch)) {
 		counts[(int)ch]++;
 		if (counts[int(ch)] == 256) //won't fit in a char, hence i scale down all the counts, to enable easy reading and writing
-			scale(counts);
+		{
+			for (auto elem : std::ranges::iota_view(0, 256)) {
+				if (counts[elem] > 0)
+					counts[elem] = (counts[elem] + 1) / 2;
+			}
+		}
 	}
-	file.close();
-	file.open(R"(..\HuffmanOrder0\testFile.txt)", std::ios_base::in | std::ios_base::binary);
+	file.clear();
+	file.seekg(0, std::ios_base::beg);
 }
 
 void createNodes(std::unique_ptr<std::uint32_t[]>& counts, treeQueue& nodes) {
@@ -62,16 +60,19 @@ void createNodes(std::unique_ptr<std::uint32_t[]>& counts, treeQueue& nodes) {
 }
 
 void outputCounts(std::unique_ptr <stl::BitFile>& output, std::unique_ptr<std::uint32_t[]>& counts) {
+	std::cout << "Output count\n";
 	for (auto i : std::ranges::iota_view(0, 256)) {
 		if (counts[i] > 0) {
 			output->file.put(counts[i]);
 			output->file.put(i);
+			std::cout<< i<<" " << counts[i] << "\n";
 		}
 	}
 	output->file.put(ENDOFCOUNT);//end of counts symbol
 }
 
 void inputCounts(std::unique_ptr <stl::BitFile>& input, treeQueue& nodes) {
+	std::cout << "input count\n";
 	std::uint32_t count{}, symbol{};
 	while (true) {
 		count = input->file.get();
@@ -79,6 +80,7 @@ void inputCounts(std::unique_ptr <stl::BitFile>& input, treeQueue& nodes) {
 			break;
 		symbol = input->file.get();
 		nodes.push(new treeNode(uChar(symbol), count));
+		std::cout << symbol << " " << count<< "\n";
 	}
 	nodes.push(new ENDOFSTREAM);
 }
@@ -101,7 +103,6 @@ treeNode* build_tree(treeQueue& nodes) {
 void convertTreeToCode(std::unique_ptr<code[]>& codes, std::uint32_t codeSoFar, std::uint32_t bitCount, treeNode* node) {
 	if (!node->child_0) {//if node is a leaf
 		codes[(int)(node->symbol)].symbolCode = codeSoFar;
-		//std::cout << node->symbol <<" : "<<bitCount << ": " << std::bitset<8>(codeSoFar) << "\n";
 		codes[(int)(node->symbol)].bitLength = bitCount;
 		return;
 	}
